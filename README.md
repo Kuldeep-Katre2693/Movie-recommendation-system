@@ -63,6 +63,6 @@ CineAI is a modern movie discovery web application powered by the OMDb API. It a
 * Streaming platform availability
 
 ## CineAI demo
-link:sensational-klepon-4dc3fa.netlify.app
+link: [sensational-klepon-4dc3fa.netlify.app](https://sensational-klepon-4dc3fa.netlify.app/)
 
 CineAI combines movie discovery, recommendations, and watchlist management into a simple and enjoyable user experience.
