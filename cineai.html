@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineAI — Smart Movie Discovery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #08080e;
+  --bg2:     #10101a;
+  --bg3:     #18182a;
+  --bg4:     #22223a;
+  --gold:    #f5c518;
+  --gold2:   #c9a010;
+  --red:     #e8004d;
+  --text:    #ededf5;
+  --muted:   #7a7a9a;
+  --border:  rgba(255,255,255,0.07);
+  --card-w:  180px;
+  --radius:  12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* ── Nav ── */
+nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:16px;padding:0 32px;height:64px;background:rgba(8,8,14,.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--border)}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--gold);white-space:nowrap;flex-shrink:0}
+.logo span{color:var(--text);opacity:.6}
+.search-wrap{flex:1;max-width:560px;position:relative}
+.search-wrap input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:32px;padding:9px 20px 9px 44px;font-size:14px;font-family:inherit;color:var(--text);outline:none;transition:.2s}
+.search-wrap input:focus{border-color:var(--gold);background:var(--bg2)}
+.search-wrap input::placeholder{color:var(--muted)}
+.search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;font-size:16px}
+.nav-btns{display:flex;gap:10px;margin-left:auto;flex-shrink:0}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--text);padding:7px 16px;border-radius:20px;font-size:13px;font-family:inherit;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:6px}
+.btn-ghost:hover{background:var(--bg3);border-color:var(--gold);color:var(--gold)}
+.wl-count{background:var(--red);color:#fff;font-size:11px;font-weight:600;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
+
+/* ── API Key Setup ── */
+#setup-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;padding:32px;text-align:center}
+.setup-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:48px 48px 40px;max-width:500px;width:100%}
+.setup-card h1{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:2px;color:var(--gold);margin-bottom:8px}
+.setup-card p{color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:28px}
+.setup-card .key-steps{background:var(--bg3);border-radius:12px;padding:16px 20px;text-align:left;margin-bottom:24px}
+.setup-card .key-steps li{font-size:13px;color:var(--muted);padding:4px 0;list-style:none;display:flex;align-items:flex-start;gap:8px}
+.setup-card .key-steps li::before{content:'→';color:var(--gold);flex-shrink:0}
+.key-input-row{display:flex;gap:10px;margin-bottom:12px}
+.key-input-row input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;color:var(--text);outline:none}
+.key-input-row input:focus{border-color:var(--gold)}
+.btn-gold{background:var(--gold);color:#000;border:none;border-radius:10px;padding:10px 22px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:.15s;white-space:nowrap}
+.btn-gold:hover{background:var(--gold2)}
+.setup-err{font-size:12px;color:var(--red);min-height:16px}
+.omdb-link{font-size:12px;color:var(--muted)}
+.omdb-link a{color:var(--gold);text-decoration:none}
+.omdb-link a:hover{text-decoration:underline}
+
+/* ── Main Layout ── */
+main{padding:28px 32px 60px}
+#app-content{display:none}
+
+/* ── Genre Tabs ── */
+.genre-bar{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:28px;scrollbar-width:none}
+.genre-bar::-webkit-scrollbar{display:none}
+.genre-pill{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:6px 18px;border-radius:20px;font-size:13px;font-family:inherit;cursor:pointer;transition:.18s;white-space:nowrap;flex-shrink:0}
+.genre-pill:hover,.genre-pill.active{background:var(--gold);color:#000;border-color:var(--gold);font-weight:500}
+
+/* ── Section ── */
+.section{margin-bottom:40px}
+.section-header{display:flex;align-items:baseline;gap:12px;margin-bottom:16px}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1.5px;color:var(--text)}
+.section-sub{font-size:12px;color:var(--muted)}
+
+/* ── Movie Grid ── */
+.movie-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-w),1fr));gap:20px}
+.movie-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-w),1fr));gap:20px}
+
+/* ── Movie Card ── */
+.card{cursor:pointer;position:relative;border-radius:var(--radius);overflow:hidden;background:var(--bg2);border:1px solid var(--border);transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .22s;aspect-ratio:2/3;display:flex;flex-direction:column}
+.card:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 20px 50px rgba(0,0,0,.7),0 0 0 1px rgba(245,197,24,.3)}
+.card-poster{width:100%;flex:1;object-fit:cover;display:block;transition:opacity .3s}
+.card-poster.loading{opacity:0}
+.card-poster.loaded{opacity:1}
+.no-poster{width:100%;flex:1;background:var(--bg3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px}
+.no-poster svg{opacity:.3}
+.card-info{padding:10px 12px;background:var(--bg2)}
+.card-title{font-size:13px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.card-meta{display:flex;align-items:center;justify-content:space-between}
+.card-year{font-size:11px;color:var(--muted)}
+.imdb-badge{background:var(--gold);color:#000;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;display:flex;align-items:center;gap:3px}
+.card-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,8,14,.95) 0%,rgba(8,8,14,.1) 50%,transparent 100%);opacity:0;transition:.22s;display:flex;align-items:flex-end;padding:14px}
+.card:hover .card-overlay{opacity:1}
+.overlay-genres{display:flex;flex-wrap:wrap;gap:4px}
+.genre-tag{font-size:10px;background:rgba(245,197,24,.15);color:var(--gold);border:1px solid rgba(245,197,24,.3);padding:2px 8px;border-radius:10px}
+.wl-btn{position:absolute;top:10px;right:10px;background:rgba(8,8,14,.7);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:.2s;backdrop-filter:blur(4px)}
+.card:hover .wl-btn{opacity:1}
+.wl-btn:hover{background:var(--red);border-color:var(--red)}
+.wl-btn.in-wl{opacity:1;background:var(--red);border-color:var(--red)}
+
+/* ── Skeleton ── */
+.skeleton{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:var(--radius);aspect-ratio:2/3}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(6px)}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:20px;width:100%;max-width:900px;max-height:90vh;overflow-y:auto;position:relative;transform:translateY(24px) scale(.97);transition:transform .3s cubic-bezier(.34,1.2,.64,1)}
+.modal-overlay.open .modal{transform:none}
+.modal-close{position:sticky;top:16px;float:right;margin:16px 20px 0 0;background:var(--bg3);border:1px solid var(--border);color:var(--text);width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;flex-shrink:0;transition:.15s}
+.modal-close:hover{background:var(--red);border-color:var(--red)}
+.modal-body{display:grid;grid-template-columns:240px 1fr;gap:0}
+.modal-poster-col{padding:28px 0 28px 28px}
+.modal-poster{width:100%;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+.modal-add-wl{margin-top:12px;width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:10px;font-family:inherit;font-size:13px;cursor:pointer;transition:.18s;display:flex;align-items:center;justify-content:center;gap:7px}
+.modal-add-wl:hover{background:var(--red);border-color:var(--red)}
+.modal-add-wl.in-wl{background:var(--red);border-color:var(--red)}
+.modal-info-col{padding:28px 28px 28px 24px}
+.modal-type{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:1.5px;line-height:1.1;margin-bottom:8px}
+.modal-tagline{font-size:14px;color:var(--muted);font-style:italic;margin-bottom:14px}
+.modal-badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.badge-year{background:var(--bg3);color:var(--muted);padding:4px 12px;border-radius:6px;font-size:12px}
+.badge-runtime{background:var(--bg3);color:var(--muted);padding:4px 12px;border-radius:6px;font-size:12px}
+.badge-rated{background:var(--bg3);color:var(--text);padding:4px 12px;border-radius:6px;font-size:12px;font-weight:500}
+.badge-imdb{background:var(--gold);color:#000;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700}
+.badge-genre{background:rgba(245,197,24,.1);color:var(--gold);border:1px solid rgba(245,197,24,.2);padding:4px 12px;border-radius:6px;font-size:12px}
+.modal-plot{font-size:14px;line-height:1.75;color:#c0c0d8;margin-bottom:20px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+.detail-item{background:var(--bg3);border-radius:8px;padding:10px 14px}
+.detail-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.detail-val{font-size:13px;color:var(--text);line-height:1.4}
+.ratings-row{display:flex;gap:12px;margin-bottom:20px}
+.rating-block{flex:1;background:var(--bg3);border-radius:10px;padding:12px;text-align:center}
+.rating-val{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold)}
+.rating-src{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.modal-section-title{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.similar-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.similar-row::-webkit-scrollbar{display:none}
+.sim-card{flex-shrink:0;width:110px;cursor:pointer;border-radius:8px;overflow:hidden;background:var(--bg3);border:1px solid var(--border);transition:.2s}
+.sim-card:hover{border-color:var(--gold);transform:translateY(-3px)}
+.sim-poster{width:100%;aspect-ratio:2/3;object-fit:cover;display:block}
+.sim-info{padding:6px 8px}
+.sim-title{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sim-year{font-size:10px;color:var(--muted)}
+
+/* ── Watchlist Sidebar ── */
+.wl-sidebar{position:fixed;top:0;right:0;height:100%;width:320px;background:var(--bg2);border-left:1px solid var(--border);z-index:300;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.25,.8,.25,1)}
+.wl-sidebar.open{transform:none}
+.wl-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.wl-header h3{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px}
+.wl-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:4px}
+.wl-list{flex:1;overflow-y:auto;padding:12px}
+.wl-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:12px;font-size:14px;text-align:center;padding:32px}
+.wl-item{display:flex;gap:12px;padding:10px;border-radius:10px;cursor:pointer;transition:.15s;border:1px solid transparent;margin-bottom:6px}
+.wl-item:hover{background:var(--bg3);border-color:var(--border)}
+.wl-thumb{width:50px;height:75px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--bg3)}
+.wl-item-info{flex:1;min-width:0}
+.wl-item-title{font-size:13px;font-weight:500;line-height:1.3;margin-bottom:4px}
+.wl-item-meta{font-size:11px;color:var(--muted)}
+.wl-remove{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px;border-radius:6px;transition:.15s;flex-shrink:0;align-self:flex-start}
+.wl-remove:hover{color:var(--red)}
+
+/* ── Search results header ── */
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.results-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px}
+.results-count{font-size:13px;color:var(--muted)}
+.clear-search{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;font-family:inherit}
+.clear-search:hover{color:var(--text)}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:30px;font-size:13px;z-index:500;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* ── Footer ── */
+footer{text-align:center;padding:28px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);line-height:1.7}
+footer a{color:var(--gold);text-decoration:none}
+
+/* ── Responsive ── */
+@media(max-width:700px){
+  nav{padding:0 16px;gap:10px}
+  main{padding:20px 16px 40px}
+  .modal-body{grid-template-columns:1fr}
+  .modal-poster-col{padding:24px 24px 0}
+  .modal-poster{width:160px}
+  .detail-grid{grid-template-columns:1fr}
+  .wl-sidebar{width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="logo">Cine<span>AI</span></div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Search movies, directors, actors…" autocomplete="off">
+  </div>
+  <div class="nav-btns">
+    <button class="btn-ghost" id="wl-toggle-btn">♡ Watchlist <span class="wl-count" id="wl-count">0</span></button>
+    <button class="btn-ghost" id="reset-key-btn" title="Change API Key">⚙ Key</button>
+  </div>
+</nav>
+
+<!-- API Setup Screen -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <h1>CineAI</h1>
+    <p>Discover movies with live IMDB data — ratings, cast, plot, awards and personalised recommendations.</p>
+    <div class="key-steps">
+      <ul>
+        <li>Go to <a href="https://www.omdbapi.com/apikey.aspx" target="_blank" style="color:var(--gold)">omdbapi.com/apikey.aspx</a></li>
+        <li>Sign up for a <strong>FREE</strong> key (1,000 requests/day)</li>
+        <li>Check your email and activate the key</li>
+        <li>Paste it below — you're ready to explore</li>
+      </ul>
+    </div>
+    <div class="key-input-row">
+      <input type="text" id="api-key-input" placeholder="Paste your OMDB API key…" autocomplete="off">
+      <button class="btn-gold" id="save-key-btn">Connect</button>
+    </div>
+    <p class="setup-err" id="key-err"></p>
+    <p class="omdb-link" style="margin-top:10px">OMDB is a free, fan-run database powered by <a href="https://www.imdb.com" target="_blank">IMDb</a> data.</p>
+  </div>
+</div>
+
+<!-- Main App -->
+<main id="app-content">
+  <div class="genre-bar" id="genre-bar"></div>
+  <div id="content-area"></div>
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal">
+    <button class="modal-close" id="modal-close">✕</button>
+    <div id="modal-inner"></div>
+  </div>
+</div>
+
+<!-- Watchlist Sidebar -->
+<div class="wl-sidebar" id="wl-sidebar">
+  <div class="wl-header">
+    <h3>My Watchlist</h3>
+    <button class="wl-close" id="wl-close">✕</button>
+  </div>
+  <div class="wl-list" id="wl-list"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<footer>
+  Data provided by <a href="https://www.omdbapi.com" target="_blank">OMDb API</a> · Powered by IMDb · Built with CineAI
+</footer>
+
+<script>
+// ──────────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────────
+let API_KEY = localStorage.getItem('cineai_key') || '';
+let watchlist = JSON.parse(localStorage.getItem('cineai_wl') || '[]');
+let currentGenre = 'All';
+let searchTimer = null;
+let isSearchMode = false;
+
+const GENRES = ['All','Action','Comedy','Drama','Thriller','Horror','Sci-Fi','Romance','Animation','Crime','Biography','Adventure'];
+
+const POPULAR_BY_GENRE = {
+  All:       ['Inception','The Dark Knight','Pulp Fiction','Interstellar','Parasite','Joker','1917','La La Land'],
+  Action:    ['Mad Max: Fury Road','John Wick','The Dark Knight','Mission: Impossible','Top Gun: Maverick'],
+  Comedy:    ['The Grand Budapest Hotel','Superbad','Knives Out','Game Night','The Death of Stalin'],
+  Drama:     ['The Shawshank Redemption','Schindler\'s List','Whiplash','Moonlight','Marriage Story'],
+  Thriller:  ['Se7en','Gone Girl','Prisoners','Zodiac','No Country for Old Men'],
+  Horror:    ['Hereditary','Get Out','The Witch','Midsommar','A Quiet Place'],
+  'Sci-Fi':  ['Blade Runner 2049','Arrival','Ex Machina','Interstellar','Moon'],
+  Romance:   ['La La Land','Call Me by Your Name','Before Sunrise','Eternal Sunshine','Her'],
+  Animation: ['Spirited Away','Coco','Your Name','Spider-Man: Into the Spider-Verse','WALL-E'],
+  Crime:     ['Goodfellas','The Godfather','Heat','Sicario','Training Day'],
+  Biography: ['Bohemian Rhapsody','The Social Network','Ford v Ferrari','Rocketman','Oppenheimer'],
+  Adventure: ['The Lord of the Rings','Indiana Jones','Pirates of the Caribbean','Avatar','Jurassic Park'],
+};
+
+// ──────────────────────────────────────────────────
+// API
+// ──────────────────────────────────────────────────
+async function omdb(params) {
+  const url = new URL('https://www.omdbapi.com/');
+  url.searchParams.set('apikey', API_KEY);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Network error');
+  return r.json();
+}
+
+async function searchOMDB(query, page = 1) {
+  return omdb({ s: query, type: 'movie', page });
+}
+
+async function getDetails(imdbId) {
+  return omdb({ i: imdbId, plot: 'full' });
+}
+
+async function getByTitle(title) {
+  return omdb({ t: title, plot: 'short' });
+}
+
+// ──────────────────────────────────────────────────
+// Render helpers
+// ──────────────────────────────────────────────────
+function posterImg(src, title, cls = 'card-poster') {
+  if (src && src !== 'N/A') {
+    return `<img class="${cls} loading" src="${src}" alt="${escHtml(title)}" onload="this.classList.remove('loading');this.classList.add('loaded')" onerror="this.parentElement.innerHTML=noPosterHTML()">`;
+  }
+  return noPosterHTML();
+}
+
+function noPosterHTML() {
+  return `<div class="no-poster"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="20" height="20" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>No poster</span></div>`;
+}
+
+function escHtml(s = '') {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function imdbBadge(r) {
+  if (!r || r === 'N/A') return '';
+  return `<span class="imdb-badge">★ ${r}</span>`;
+}
+
+function inWatchlist(id) {
+  return watchlist.some(m => m.imdbID === id);
+}
+
+function cardHTML(movie) {
+  const wlClass = inWatchlist(movie.imdbID) ? 'wl-btn in-wl' : 'wl-btn';
+  const genres = (movie.Genre || '').split(',').slice(0,2).map(g => `<span class="genre-tag">${g.trim()}</span>`).join('');
+  return `
+    <div class="card" data-id="${movie.imdbID}" onclick="openMovie('${movie.imdbID}')">
+      ${posterImg(movie.Poster, movie.Title)}
+      <div class="card-info">
+        <div class="card-title" title="${escHtml(movie.Title)}">${escHtml(movie.Title)}</div>
+        <div class="card-meta">
+          <span class="card-year">${movie.Year || ''}</span>
+          ${imdbBadge(movie.imdbRating)}
+        </div>
+      </div>
+      <div class="card-overlay"><div class="overlay-genres">${genres}</div></div>
+      <button class="${wlClass}" onclick="event.stopPropagation();toggleWL(event,${JSON.stringify(movie).replace(/"/g,'&quot;')})" title="${inWatchlist(movie.imdbID) ? 'Remove from watchlist' : 'Add to watchlist'}">
+        ${inWatchlist(movie.imdbID) ? '♥' : '♡'}
+      </button>
+    </div>`;
+}
+
+function skeletonGrid(n = 8) {
+  return `<div class="movie-grid">${'<div class="skeleton"></div>'.repeat(n)}</div>`;
+}
+
+// ──────────────────────────────────────────────────
+// Genre bar
+// ──────────────────────────────────────────────────
+function renderGenreBar() {
+  const bar = document.getElementById('genre-bar');
+  bar.innerHTML = GENRES.map(g =>
+    `<button class="genre-pill${g === currentGenre ? ' active' : ''}" onclick="selectGenre('${g}')">${g}</button>`
+  ).join('');
+}
+
+function selectGenre(g) {
+  if (isSearchMode) {
+    clearSearch();
+    return;
+  }
+  currentGenre = g;
+  renderGenreBar();
+  loadGenre(g);
+}
+
+// ──────────────────────────────────────────────────
+// Load genre
+// ──────────────────────────────────────────────────
+async function loadGenre(genre) {
+  const area = document.getElementById('content-area');
+  area.innerHTML = skeletonGrid(8);
+  const titles = POPULAR_BY_GENRE[genre] || POPULAR_BY_GENRE['All'];
+  const movies = await Promise.all(
+    titles.map(t => getByTitle(t).catch(() => null))
+  );
+  const valid = movies.filter(m => m && m.Response === 'True');
+  if (!valid.length) {
+    area.innerHTML = `<p style="color:var(--muted);text-align:center;padding:60px 0">No results found. Try another genre.</p>`;
+    return;
+  }
+  area.innerHTML = `
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">${genre === 'All' ? 'Popular Right Now' : genre}</div>
+        <div class="section-sub">${valid.length} movies · IMDB data</div>
+      </div>
+      <div class="movie-grid">${valid.map(cardHTML).join('')}</div>
+    </div>`;
+}
+
+// ──────────────────────────────────────────────────
+// Search
+// ──────────────────────────────────────────────────
+async function doSearch(query) {
+  if (!query.trim()) { clearSearch(); return; }
+  isSearchMode = true;
+  const area = document.getElementById('content-area');
+  area.innerHTML = `
+    <div class="results-header">
+      <div class="results-title">Searching…</div>
+      <button class="clear-search" onclick="clearSearch()">✕ Clear</button>
+    </div>` + skeletonGrid(8);
+  try {
+    const data = await searchOMDB(query);
+    if (data.Response !== 'True') {
+      area.innerHTML = `
+        <div class="results-header">
+          <div class="results-title">No Results</div>
+          <button class="clear-search" onclick="clearSearch()">✕ Clear</button>
+        </div>
+        <p style="color:var(--muted);padding:40px 0;text-align:center">No movies found for "${escHtml(query)}"</p>`;
+      return;
+    }
+    const detailed = await Promise.all(
+      data.Search.slice(0,8).map(m => getDetails(m.imdbID).catch(() => m))
+    );
+    area.innerHTML = `
+      <div class="results-header">
+        <div class="results-title">Results for "${escHtml(query)}"</div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div class="results-count">${data.totalResults} total</div>
+          <button class="clear-search" onclick="clearSearch()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="movie-grid">${detailed.map(cardHTML).join('')}</div>`;
+  } catch (e) {
+    area.innerHTML = `<p style="color:var(--red);padding:40px 0;text-align:center">Error fetching results. Check your API key.</p>`;
+  }
+}
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  isSearchMode = false;
+  currentGenre = 'All';
+  renderGenreBar();
+  loadGenre('All');
+}
+
+// ──────────────────────────────────────────────────
+// Movie Modal
+// ──────────────────────────────────────────────────
+async function openMovie(id) {
+  const overlay = document.getElementById('modal-overlay');
+  const inner = document.getElementById('modal-inner');
+  inner.innerHTML = `<div style="padding:80px;text-align:center;color:var(--muted)">Loading…</div>`;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  try {
+    const m = await getDetails(id);
+    if (m.Response !== 'True') throw new Error('Not found');
+
+    // Ratings blocks
+    const ratings = (m.Ratings || []).map(r => `
+      <div class="rating-block">
+        <div class="rating-val">${r.Value.split('/')[0]}</div>
+        <div class="rating-src">${r.Source.replace('Internet Movie Database','IMDb').replace('Rotten Tomatoes','Rotten T.').replace('Metacritic','Metacritic')}</div>
+      </div>`).join('');
+
+    // Genres as badges
+    const genreBadges = (m.Genre || '').split(',').map(g => `<span class="badge-genre">${g.trim()}</span>`).join('');
+
+    const wlBtnClass = inWatchlist(m.imdbID) ? 'modal-add-wl in-wl' : 'modal-add-wl';
+    const wlBtnText = inWatchlist(m.imdbID) ? '♥ In Watchlist' : '♡ Add to Watchlist';
+
+    inner.innerHTML = `
+      <div class="modal-body">
+        <div class="modal-poster-col">
+          ${m.Poster && m.Poster !== 'N/A'
+            ? `<img class="modal-poster" src="${m.Poster}" alt="${escHtml(m.Title)}">`
+            : `<div style="width:100%;aspect-ratio:2/3;background:var(--bg3);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--muted)">No poster</div>`}
+          <button class="${wlBtnClass}" id="modal-wl-btn" onclick="toggleWLModal(${JSON.stringify(m).replace(/"/g,'&quot;')})">
+            ${wlBtnText}
+          </button>
+          ${m.imdbID ? `<a href="https://www.imdb.com/title/${m.imdbID}" target="_blank" style="display:block;text-align:center;margin-top:8px;font-size:12px;color:var(--gold);text-decoration:none;opacity:.8">View on IMDb ↗</a>` : ''}
+        </div>
+        <div class="modal-info-col">
+          <div class="modal-type">${m.Type || 'movie'} ${m.Year ? '· ' + m.Year : ''}</div>
+          <div class="modal-title">${escHtml(m.Title)}</div>
+          ${m.Tagline ? `<div class="modal-tagline">"${escHtml(m.Tagline)}"</div>` : ''}
+          <div class="modal-badges">
+            ${m.Year !== 'N/A' ? `<span class="badge-year">${m.Year}</span>` : ''}
+            ${m.Runtime !== 'N/A' ? `<span class="badge-runtime">⏱ ${m.Runtime}</span>` : ''}
+            ${m.Rated && m.Rated !== 'N/A' ? `<span class="badge-rated">${m.Rated}</span>` : ''}
+            ${m.imdbRating !== 'N/A' ? `<span class="badge-imdb">★ ${m.imdbRating} IMDb</span>` : ''}
+            ${genreBadges}
+          </div>
+          ${ratings.length ? `<div class="ratings-row">${ratings}</div>` : ''}
+          <p class="modal-plot">${escHtml(m.Plot !== 'N/A' ? m.Plot : 'No plot available.')}</p>
+          <div class="detail-grid">
+            ${m.Director !== 'N/A' ? `<div class="detail-item"><div class="detail-label">Director</div><div class="detail-val">${escHtml(m.Director)}</div></div>` : ''}
+            ${m.Actors !== 'N/A' ? `<div class="detail-item"><div class="detail-label">Cast</div><div class="detail-val">${escHtml(m.Actors)}</div></div>` : ''}
+            ${m.Writer !== 'N/A' ? `<div class="detail-item"><div class="detail-label">Writer</div><div class="detail-val">${escHtml(m.Writer)}</div></div>` : ''}
+            ${m.Language !== 'N/A' ? `<div class="detail-item"><div class="detail-label">Language</div><div class="detail-val">${escHtml(m.Language)}</div></div>` : ''}
+            ${m.Country !== 'N/A' ? `<div class="detail-item"><div class="detail-label">Country</div><div class="detail-val">${escHtml(m.Country)}</div></div>` : ''}
+            ${m.BoxOffice && m.BoxOffice !== 'N/A' ? `<div class="detail-item"><div class="detail-label">Box Office</div><div class="detail-val">${escHtml(m.BoxOffice)}</div></div>` : ''}
+            ${m.Awards && m.Awards !== 'N/A' ? `<div class="detail-item" style="grid-column:1/-1"><div class="detail-label">Awards</div><div class="detail-val">${escHtml(m.Awards)}</div></div>` : ''}
+          </div>
+          <div id="similar-section"><div style="color:var(--muted);font-size:13px">Loading recommendations…</div></div>
+        </div>
+      </div>`;
+
+    // Load similar movies
+    loadSimilar(m);
+
+  } catch (e) {
+    inner.innerHTML = `<div style="padding:60px;text-align:center;color:var(--red)">Could not load movie details.</div>`;
+  }
+}
+
+async function loadSimilar(movie) {
+  const sec = document.getElementById('similar-section');
+  if (!sec) return;
+  try {
+    const genre = (movie.Genre || '').split(',')[0].trim();
+    const data = await searchOMDB(genre);
+    if (data.Response !== 'True') { sec.innerHTML = ''; return; }
+    const similar = data.Search.filter(m => m.imdbID !== movie.imdbID).slice(0, 8);
+    sec.innerHTML = `
+      <div class="modal-section-title" style="margin-top:4px">You might also like</div>
+      <div class="similar-row">
+        ${similar.map(m => `
+          <div class="sim-card" onclick="document.getElementById('modal-overlay').classList.remove('open');setTimeout(()=>openMovie('${m.imdbID}'),50)">
+            ${m.Poster && m.Poster !== 'N/A'
+              ? `<img class="sim-poster" src="${m.Poster}" alt="${escHtml(m.Title)}" loading="lazy" onerror="this.style.display='none'">`
+              : `<div style="width:100%;aspect-ratio:2/3;background:var(--bg3)"></div>`}
+            <div class="sim-info">
+              <div class="sim-title">${escHtml(m.Title)}</div>
+              <div class="sim-year">${m.Year}</div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+  } catch(e) { sec.innerHTML = ''; }
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ──────────────────────────────────────────────────
+// Watchlist
+// ──────────────────────────────────────────────────
+function toggleWL(e, movie) {
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  if (inWatchlist(movie.imdbID)) {
+    watchlist = watchlist.filter(m => m.imdbID !== movie.imdbID);
+    btn.textContent = '♡';
+    btn.classList.remove('in-wl');
+    showToast(`Removed from watchlist`);
+  } else {
+    watchlist.push(movie);
+    btn.textContent = '♥';
+    btn.classList.add('in-wl');
+    showToast(`Added to watchlist`);
+  }
+  saveWL();
+}
+
+function toggleWLModal(movie) {
+  const btn = document.getElementById('modal-wl-btn');
+  if (inWatchlist(movie.imdbID)) {
+    watchlist = watchlist.filter(m => m.imdbID !== movie.imdbID);
+    btn.textContent = '♡ Add to Watchlist';
+    btn.classList.remove('in-wl');
+    showToast('Removed from watchlist');
+  } else {
+    watchlist.push(movie);
+    btn.textContent = '♥ In Watchlist';
+    btn.classList.add('in-wl');
+    showToast('Added to watchlist ♥');
+  }
+  saveWL();
+  renderWLSidebar();
+}
+
+function saveWL() {
+  localStorage.setItem('cineai_wl', JSON.stringify(watchlist));
+  document.getElementById('wl-count').textContent = watchlist.length;
+}
+
+function renderWLSidebar() {
+  const list = document.getElementById('wl-list');
+  if (!watchlist.length) {
+    list.innerHTML = `<div class="wl-empty"><span style="font-size:40px">🎬</span><span>Your watchlist is empty.<br>Click ♡ on any movie to save it.</span></div>`;
+    return;
+  }
+  list.innerHTML = watchlist.map(m => `
+    <div class="wl-item" onclick="document.getElementById('wl-sidebar').classList.remove('open');openMovie('${m.imdbID}')">
+      ${m.Poster && m.Poster !== 'N/A'
+        ? `<img class="wl-thumb" src="${m.Poster}" alt="${escHtml(m.Title)}" loading="lazy">`
+        : `<div class="wl-thumb"></div>`}
+      <div class="wl-item-info">
+        <div class="wl-item-title">${escHtml(m.Title)}</div>
+        <div class="wl-item-meta">${m.Year || ''} · ${(m.Genre || '').split(',')[0]}</div>
+        ${m.imdbRating && m.imdbRating !== 'N/A' ? `<div style="font-size:11px;color:var(--gold);margin-top:2px">★ ${m.imdbRating}</div>` : ''}
+      </div>
+      <button class="wl-remove" onclick="event.stopPropagation();removeFromWL('${m.imdbID}')" title="Remove">✕</button>
+    </div>`).join('');
+}
+
+function removeFromWL(id) {
+  watchlist = watchlist.filter(m => m.imdbID !== id);
+  saveWL();
+  renderWLSidebar();
+}
+
+// ──────────────────────────────────────────────────
+// Toast
+// ──────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ──────────────────────────────────────────────────
+// API Key
+// ──────────────────────────────────────────────────
+async function saveKey() {
+  const input = document.getElementById('api-key-input');
+  const key = input.value.trim();
+  const err = document.getElementById('key-err');
+  if (!key) { err.textContent = 'Please enter your API key.'; return; }
+  err.textContent = 'Validating…';
+  try {
+    const r = await fetch(`https://www.omdbapi.com/?apikey=${key}&t=Inception`);
+    const data = await r.json();
+    if (data.Response === 'True') {
+      API_KEY = key;
+      localStorage.setItem('cineai_key', key);
+      err.textContent = '';
+      initApp();
+    } else {
+      err.textContent = 'Invalid key. Make sure you activated it via email.';
+    }
+  } catch (e) {
+    err.textContent = 'Network error. Please try again.';
+  }
+}
+
+// ──────────────────────────────────────────────────
+// Init
+// ──────────────────────────────────────────────────
+function initApp() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app-content').style.display = 'block';
+  renderGenreBar();
+  renderWLSidebar();
+  document.getElementById('wl-count').textContent = watchlist.length;
+  loadGenre('All');
+}
+
+// Events
+document.getElementById('save-key-btn').addEventListener('click', saveKey);
+document.getElementById('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveKey(); });
+
+document.getElementById('search-input').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  const q = e.target.value.trim();
+  if (!q) { clearSearch(); return; }
+  searchTimer = setTimeout(() => doSearch(q), 450);
+});
+
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+document.getElementById('wl-toggle-btn').addEventListener('click', () => {
+  document.getElementById('wl-sidebar').classList.toggle('open');
+  renderWLSidebar();
+});
+document.getElementById('wl-close').addEventListener('click', () => {
+  document.getElementById('wl-sidebar').classList.remove('open');
+});
+
+document.getElementById('reset-key-btn').addEventListener('click', () => {
+  if (confirm('Change your API key?')) {
+    localStorage.removeItem('cineai_key');
+    API_KEY = '';
+    document.getElementById('app-content').style.display = 'none';
+    document.getElementById('setup-screen').style.display = 'flex';
+  }
+});
+
+// Start
+if (API_KEY) {
+  initApp();
+}
+</script>
+</body>
+</html>
